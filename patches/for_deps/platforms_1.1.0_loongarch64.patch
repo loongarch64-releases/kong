@@ -1,0 +1,13 @@
+diff --git a/host/extension.bzl b/host/extension.bzl
+index 69410cd..77d5e4b 100644
+--- a/host/extension.bzl
++++ b/host/extension.bzl
+@@ -17,6 +17,8 @@ def _translate_cpu(arch):
+         return "mips64"
+     if arch in ["riscv64"]:
+         return "riscv64"
++    if arch in ["loongarch64", "loong64"]:
++        return "loongarch64"
+     return None
+
+ def _translate_os(os):

@@ -1,0 +1,48 @@
+diff --git a/build-aux/m4-autogen/config.guess b/build-aux/m4-autogen/config.guess
+index b33c9e8..9f6c9ec 100755
+--- a/build-aux/m4-autogen/config.guess
++++ b/build-aux/m4-autogen/config.guess
+@@ -909,6 +909,9 @@ EOF
+     aarch64:Linux:*:*)
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+ 	exit ;;
++    loongarch64:Linux:*:*)
++	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
++	exit ;;
+     aarch64_be:Linux:*:*)
+ 	UNAME_MACHINE=aarch64_be
+ 	echo "$UNAME_MACHINE"-unknown-linux-"$LIBC"
+diff --git a/build-aux/m4-autogen/config.sub b/build-aux/m4-autogen/config.sub
+index b51fb8c..2bbd268 100755
+--- a/build-aux/m4-autogen/config.sub
++++ b/build-aux/m4-autogen/config.sub
+@@ -1181,6 +1181,7 @@ case $cpu-$vendor in
+ 			| k1om \
+ 			| le32 | le64 \
+ 			| lm32 \
++			| loongarch64 \
+ 			| m32c | m32r | m32rle \
+ 			| m5200 | m68000 | m680[012346]0 | m68360 | m683?2 | m68k | v70 | w65 \
+ 			| m6811 | m68hc11 | m6812 | m68hc12 | m68hcs12x | nvptx | picochip \
+diff --git a/lib/libcrypt.map.in b/lib/libcrypt.map.in
+index e746a1b..cec70ce 100644
+--- a/lib/libcrypt.map.in
++++ b/lib/libcrypt.map.in
+@@ -43,4 +43,5 @@ fcrypt			-		GLIBC_2.0
+ %chain GLIBC_2.0 GLIBC_2.2 GLIBC_2.2.1 GLIBC_2.2.2 GLIBC_2.2.5 GLIBC_2.2.6
+ %chain GLIBC_2.3 GLIBC_2.4 GLIBC_2.12 GLIBC_2.16 GLIBC_2.17 GLIBC_2.18
+ %chain GLIBC_2.21 GLIBC_2.27 GLIBC_2.29 GLIBC_2.32 GLIBC_2.33
++%chain GLIBC_2.36
+ %chain OW_CRYPT_1.0 XCRYPT_2.0 XCRYPT_4.3 XCRYPT_4.4
+diff --git a/lib/libcrypt.minver b/lib/libcrypt.minver
+index 1044493..30d813e 100644
+--- a/lib/libcrypt.minver
++++ b/lib/libcrypt.minver
+@@ -60,6 +60,7 @@ GLIBC_2.3    kfreebsd.*gnu   i[3-9]86
+ ERROR        kfreebsd.*gnu   .
+ 
+ # Linux with GNU libc
++GLIBC_2.36   linux.*gnu      loongarch64   __WORDSIZE == 64 && ULONG_MAX != UINT_MAX /* lp64* ABI */
+ GLIBC_2.33   linux.*gnu      riscv32
+ GLIBC_2.32   linux.*gnu      arc
+ GLIBC_2.29   linux.*gnu      csky
