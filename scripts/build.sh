@@ -37,35 +37,41 @@ prepare()
 # 2. 编译阶段：核心构建命令
 build()
 {
+    local MAJOR_VER=$(echo ${VERSION} | cut -d. -f1)
+    local MINOR_VER=$(echo ${VERSION} | cut -d. -f1)
+    local VER_NUM=$(( 10#$MAJOR_VER * 1000 + 10#$MINOR_VER ))
+
     echo "🔨 [Build] Compiling source code..."
     
     pushd "${SRCS}/${VERSION}"
 
     export CARGO_BAZEL_GENERATOR_URL="file://${CARGO_BAZEL_BIN}"
     
-    # 更新 crate_locks/atc_router.lock
-    CARGO_BAZEL_REPIN=true \
-    CARGO_BAZEL_REPIN_ONLY=atc_router_crate_index \
-        bazel sync --noenable_bzlmod --only=atc_router_crate_index
+    if [ "${VER_NUM}" -ge 3009000 ]; then
+        # 更新 crate_locks/atc_router.lock
+        CARGO_BAZEL_REPIN=true \
+        CARGO_BAZEL_REPIN_ONLY=atc_router_crate_index \
+            bazel sync --noenable_bzlmod --only=atc_router_crate_index
+    fi
 
+   local BUILD_PARAM=(
+             --noenable_bzlmod
+	     --config=release
+     	     --platforms=//:generic-loongarch64
+             --//:wasmx=false
+	     --//:skip_webui=true
+	     --verbose_failures
+	 )
     # 构建 kong
-    bazel build \
-        --noenable_bzlmod \
-        --config=release \
-        --platforms=//:generic-loongarch64 \
-        --//:wasmx=false \
-        --//:skip_webui=true \
-        //build:kong
+    if [ "${VER_NUM}" -ge 3009000 ]; then
+        bazel build "${BUILD_PARAM[@]}" //build:kong
+    else
+	bazel build "${BUILD_PARAM[@]}" //build:kong || bazel build "${BUILD_PARAM[@]}" //build:kong
+    fi
 
     # 构建 deb 包
     export NFPM_BIN=/tmp/go/bin/nfpm
-    bazel build \
-        --noenable_bzlmod \
-        --config=release \
-        --platforms=//:generic-loongarch64 \
-        --//:wasmx=false \
-        --//:skip_webui=true \
-        //:kong_deb
+    bazel build "${BUILD_PARAM}" //:kong_deb
 
     popd
 
@@ -78,7 +84,8 @@ post_build()
     echo "📦 [Post-Build] Organizing artifacts..."
     
     local PRODUCT="${DISTS}/${VERSION}//kong_${VERSION}_loongarch64.deb"
-    local BUILD_OUTPUT="${SRCS}/${VERSION}/bazel-bin/pkg/kong.loong64.deb"
+    # 输出目录是链接
+    local BUILD_OUTPUT="$(find -L ${SRCS}/${VERSION} -name "*".deb -print -quit)"
 
     cp "${BUILD_OUTPUT}" "${PRODUCT}"
     chown -R "${HOST_UID}:${HOST_GID}" "${DISTS}" "${SRCS}"

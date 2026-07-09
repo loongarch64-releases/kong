@@ -1,0 +1,26 @@
+diff --git a/build/deps.bzl b/build/deps.bzl
+index b3878eb..7319775 100644
+--- a/build/deps.bzl
++++ b/build/deps.bzl
+@@ -17,7 +17,7 @@ def atc_router_dependencies(cargo_home_isolated = True):
+ 
+     rust_register_toolchains(
+         edition = "2021",
+-        extra_target_triples = ["aarch64-unknown-linux-gnu"],
++        extra_target_triples = ["loongarch64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"],
+     )
+ 
+     rust_repository_set(
+diff --git a/build/repos.bzl b/build/repos.bzl
+index a660bd6..088ba20 100644
+--- a/build/repos.bzl
++++ b/build/repos.bzl
+@@ -14,6 +14,8 @@ def atc_router_repositories():
+ 
+     http_archive(
+         name = "rules_rust",
++        patch_args = ["-p1"],
++        patches = ["@kong//third_party:rules_rust_0.42.1_loongarch64.patch"],
+         integrity = "sha256-JLN47ZcAbx9wEr5Jiib4HduZATGLiDgK7oUi/fvotzU=",
+         urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.42.1/rules_rust-v0.42.1.tar.gz"],
+     )

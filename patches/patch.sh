@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 src="$1"
 version="$2"
@@ -89,6 +90,11 @@ LOONGARCH_LUAJIT2=/tmp/luajit2' "${src}/.requirements"
 # 源码补丁(不同版本适配)
 src_multi_version_adaptation()
 {
+    if [ "${ver_num}" -lt 3007000 ]; then
+	echo "Versions below 3.7.0 are not currently supported or have not been tested"
+	exit 1
+    fi
+
     ###################################
     # 剔除 deb 包依赖列表中的 pcre1 包: libpcre3（kong 3.7+ 都用的 pcre2）
     ###################################
@@ -97,11 +103,48 @@ src_multi_version_adaptation()
     fi
 
     ##################################
+    # pcre 10.43 的 JIT/sljit 对 loongarch 支持不完整
+    ##################################
+    if [ "${ver_num}" -eq 3007000 ] || [ "${ver_num}" -eq 3007001 ]; then
+	sed -i 's/PCRE=.*/PCRE=10.44/' "${src}/.requirements"
+	sed -i 's/sha256 =.*/sha256 = "86b9cb0aa3bcb7994faa88018292bc704cdbb708e785f7c74352ff6ea7d3175b",/' "${src}/build/openresty/pcre/pcre_repositories.bzl"
+    fi
+
+    ##################################
     # 处理 LuaJIT 加载巨大 manifest 时的 65536 constants 问题 
     ##################################
     if [ "${ver_num}" -le 3009001 ]; then
         sed -i 's/LUAROCKS=.*/LUAROCKS=3.12.2/' "${src}/.requirements"
-        sed -i 's/LUAROCKS_SHA256=.*/LUAROCKS_SHA256=b0e0c85205841ddd7be485f53d6125766d18a81d226588d2366931e9a1484492/' "${src}/.requirements"
+	if [ "${ver_num}" -lt 3008000 ]; then
+            sed -i 's/sha256 = .*/sha256 = "b0e0c85205841ddd7be485f53d6125766d18a81d226588d2366931e9a1484492",/' "${src}/build/luarocks/luarocks_repositories.bzl"
+	else
+            sed -i 's/LUAROCKS_SHA256=.*/LUAROCKS_SHA256=b0e0c85205841ddd7be485f53d6125766d18a81d226588d2366931e9a1484492/' "${src}/.requirements"
+	fi
+    fi
+
+    ###################################
+    # 处理将目录输出误声明成文件的问题(参考3.9.0+)
+    ###################################
+    if [ "${ver_num}" -lt 3009000 ]; then
+        sed -i '/"etc\/luarocks"/i \
+    ], \
+    out_dirs = [' "${src}/build/BUILD.bazel"
+        sed -i '/outputs.append(ctx.actions.declare_file/a\
+    for f in ctx.attr.out_dirs: \
+        outputs.append(ctx.actions.declare_directory(KONG_VAR["BUILD_NAME"] + "/" + f))' "${src}/build/build_system.bzl"
+	sed -i '/"outs": attr.string_list()/a \
+        "out_dirs": attr.string_list(),' "${src}/build/build_system.bzl"
+	sed -i 's/output = ctx.actions.declare_file(full_path)/__ANCHOR__/' "${src}/build/build_system.bzl"
+	sed -i '/__ANCHOR__/a \
+        if file.is_directory: \
+            output = ctx.actions.declare_directory(full_path) \
+            src = file.path + "/." \
+        else: \
+            output = ctx.actions.declare_file(full_path) \
+            src = file.path' "${src}/build/build_system.bzl"
+	sed -i '/__ANCHOR__/d' "${src}/build/build_system.bzl"
+	sed -i 's/command = "cp -r %s %s" % (file.path, output.path)/command = "cp -r %s %s" % (src, output.path)/' "${src}/build/build_system.bzl"
+	
     fi
 
     ###################################
@@ -124,23 +167,27 @@ src_multi_version_adaptation()
     if [ "${ver_num}" -ge 3009000 ]; then
         sed -i '/name = "cross_deps_libxcrypt"/,/patches =/ s/patches = \[/patches = \["\/\/build\/cross_deps\/libxcrypt:libxcrypt_4.4.27_loongarch64.patch", /' "${src}/build/cross_deps/libxcrypt/repositories.bzl"
     else
-	echo "Adapting"
+	sed -i '/name = "cross_deps_libxcrypt"/a \
+        patches = ["//build/cross_deps/libxcrypt:libxcrypt_4.4.27_loongarch64.patch", "//build/cross_deps/libxcrypt:001-4.4.27-enable-hash-all.patch"], \
+        patch_args = ["-p1"],' "${src}/build/cross_deps/libxcrypt/repositories.bzl"
     fi
 
     ##################################
     # Rust/ATC 处理
-    # 3.9.0 之前，该逻辑在外部仓库: Kong/atc-router
-    # 3.9.0 时移入 kong 主仓库
+    # 3.9.0 之前，Rust Bazel 构建逻辑在外部仓库: Kong/atc-router
+    # 3.9.0 时 Rust Bazel 构建逻辑由 kong 主仓库接管
     ##################################
     if [ "${ver_num}" -ge 3009000 ]; then
-        rust_adaption_new
+        src_rust_adaption
     else
-	echo "Adapting"
+	sed -i '/name = "atc_router",/a \
+        patches = ["//third_party:atc_router_1.6.2_loongarch64.patch"], \
+        patch_args = ["-p1"],' "${src}/build/openresty/atc_router/atc_router_repositories.bzl"
     fi
 }
 
-# 3.9.0 之前的 Rust/ATC 逻辑适配
-rust_adaption_new()
+# 3.9.0 之后的 Rust/ATC 逻辑适配
+src_rust_adaption()
 {
     ###################################
     # 添加 loongarch 的 rust_toolchain
@@ -206,14 +253,16 @@ get_rust_sha256()
 # 依赖补丁
 dep_adaption()
 {
+    mkdir -p "${src}/third_party"
+    touch "${src}/third_party/BUILD.bazel"
+
+    cp "${patches}/for_deps/rules_rust_0.42.1_loongarch64.patch" "${src}/third_party/"
+    cp "${patches}/for_deps/libxcrypt_4.4.27_loongarch64.patch" "${src}/build/cross_deps/libxcrypt/"
     if [ "${ver_num}" -ge 3009000 ]; then
-        mkdir -p "${src}/third_party"
-        touch "${src}/third_party/BUILD.bazel"
         cp "${patches}/for_deps/platforms_1.1.0_loongarch64.patch" "${src}/third_party/"
-        cp "${patches}/for_deps/rules_rust_0.42.1_loongarch64.patch" "${src}/third_party/"
-        cp "${patches}/for_deps/libxcrypt_4.4.27_loongarch64.patch" "${src}/build/cross_deps/libxcrypt/"
     else
-	echo "Adapting"
+	cp "${patches}/for_deps/atc_router_1.6.2_loongarch64.patch" "${src}/third_party/"
+	cp "${patches}/for_deps/001-4.4.27-enable-hash-all.patch" "${src}/build/cross_deps/libxcrypt/"
     fi
 }
 
