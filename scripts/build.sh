@@ -55,18 +55,18 @@ build()
     fi
 
    local BUILD_PARAM=(
-             --noenable_bzlmod
-	     --config=release
-     	     --platforms=//:generic-loongarch64
-             --//:wasmx=false
-	     --//:skip_webui=true
-	     --verbose_failures
+            --noenable_bzlmod
+            --config=release
+            --platforms=//:generic-loongarch64
+            --//:wasmx=false
+            --//:skip_webui=true
+            --verbose_failures
 	 )
     # 构建 kong
     if [ "${VER_NUM}" -ge 3009000 ]; then
         bazel build "${BUILD_PARAM[@]}" //build:kong
     else
-	bazel build "${BUILD_PARAM[@]}" //build:kong || bazel build "${BUILD_PARAM[@]}" //build:kong
+        bazel build "${BUILD_PARAM[@]}" //build:kong || bazel build "${BUILD_PARAM[@]}" //build:kong
     fi
 
     # 构建 deb 包

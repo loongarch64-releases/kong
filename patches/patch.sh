@@ -106,8 +106,8 @@ src_multi_version_adaptation()
     # pcre 10.43 的 JIT/sljit 对 loongarch 支持不完整
     ##################################
     if [ "${ver_num}" -eq 3007000 ] || [ "${ver_num}" -eq 3007001 ]; then
-	sed -i 's/PCRE=.*/PCRE=10.44/' "${src}/.requirements"
-	sed -i 's/sha256 =.*/sha256 = "86b9cb0aa3bcb7994faa88018292bc704cdbb708e785f7c74352ff6ea7d3175b",/' "${src}/build/openresty/pcre/pcre_repositories.bzl"
+        sed -i 's/PCRE=.*/PCRE=10.44/' "${src}/.requirements"
+        sed -i 's/sha256 =.*/sha256 = "86b9cb0aa3bcb7994faa88018292bc704cdbb708e785f7c74352ff6ea7d3175b",/' "${src}/build/openresty/pcre/pcre_repositories.bzl"
     fi
 
     ##################################
@@ -115,11 +115,11 @@ src_multi_version_adaptation()
     ##################################
     if [ "${ver_num}" -le 3009001 ]; then
         sed -i 's/LUAROCKS=.*/LUAROCKS=3.12.2/' "${src}/.requirements"
-	if [ "${ver_num}" -lt 3008000 ]; then
+        if [ "${ver_num}" -lt 3008000 ]; then
             sed -i 's/sha256 = .*/sha256 = "b0e0c85205841ddd7be485f53d6125766d18a81d226588d2366931e9a1484492",/' "${src}/build/luarocks/luarocks_repositories.bzl"
-	else
+        else
             sed -i 's/LUAROCKS_SHA256=.*/LUAROCKS_SHA256=b0e0c85205841ddd7be485f53d6125766d18a81d226588d2366931e9a1484492/' "${src}/.requirements"
-	fi
+        fi
     fi
 
     ###################################
@@ -132,18 +132,18 @@ src_multi_version_adaptation()
         sed -i '/outputs.append(ctx.actions.declare_file/a\
     for f in ctx.attr.out_dirs: \
         outputs.append(ctx.actions.declare_directory(KONG_VAR["BUILD_NAME"] + "/" + f))' "${src}/build/build_system.bzl"
-	sed -i '/"outs": attr.string_list()/a \
+        sed -i '/"outs": attr.string_list()/a \
         "out_dirs": attr.string_list(),' "${src}/build/build_system.bzl"
-	sed -i 's/output = ctx.actions.declare_file(full_path)/__ANCHOR__/' "${src}/build/build_system.bzl"
-	sed -i '/__ANCHOR__/a \
+        sed -i 's/output = ctx.actions.declare_file(full_path)/__ANCHOR__/' "${src}/build/build_system.bzl"
+        sed -i '/__ANCHOR__/a \
         if file.is_directory: \
             output = ctx.actions.declare_directory(full_path) \
             src = file.path + "/." \
         else: \
             output = ctx.actions.declare_file(full_path) \
             src = file.path' "${src}/build/build_system.bzl"
-	sed -i '/__ANCHOR__/d' "${src}/build/build_system.bzl"
-	sed -i 's/command = "cp -r %s %s" % (file.path, output.path)/command = "cp -r %s %s" % (src, output.path)/' "${src}/build/build_system.bzl"
+        sed -i '/__ANCHOR__/d' "${src}/build/build_system.bzl"
+        sed -i 's/command = "cp -r %s %s" % (file.path, output.path)/command = "cp -r %s %s" % (src, output.path)/' "${src}/build/build_system.bzl"
 	
     fi
 
@@ -167,7 +167,7 @@ src_multi_version_adaptation()
     if [ "${ver_num}" -ge 3009000 ]; then
         sed -i '/name = "cross_deps_libxcrypt"/,/patches =/ s/patches = \[/patches = \["\/\/build\/cross_deps\/libxcrypt:libxcrypt_4.4.27_loongarch64.patch", /' "${src}/build/cross_deps/libxcrypt/repositories.bzl"
     else
-	sed -i '/name = "cross_deps_libxcrypt"/a \
+        sed -i '/name = "cross_deps_libxcrypt"/a \
         patches = ["//build/cross_deps/libxcrypt:libxcrypt_4.4.27_loongarch64.patch", "//build/cross_deps/libxcrypt:001-4.4.27-enable-hash-all.patch"], \
         patch_args = ["-p1"],' "${src}/build/cross_deps/libxcrypt/repositories.bzl"
     fi
@@ -180,7 +180,7 @@ src_multi_version_adaptation()
     if [ "${ver_num}" -ge 3009000 ]; then
         src_rust_adaption
     else
-	sed -i '/name = "atc_router",/a \
+        sed -i '/name = "atc_router",/a \
         patches = ["//third_party:atc_router_1.6.2_loongarch64.patch"], \
         patch_args = ["-p1"],' "${src}/build/openresty/atc_router/atc_router_repositories.bzl"
     fi
@@ -207,10 +207,10 @@ src_rust_adaption()
     sed -i '/rust_register_toolchains(/,/extra_target_triples = \[/ s/extra_target_triples = \[/extra_target_triples = \["loongarch64-unknown-linux-gnu", /' "${src}/build/kong_crate/deps.bzl"
     sed -i "/rust_register_toolchains(/,/sha256s = {/ {/sha256s = {/a \\
             ${rustc_sha256}, \\
-	    ${clippy_sha256}, \\
-	    ${cargo_sha256}, \\
-	    ${llvm_tools_sha256}, \\
-	    ${rust_std_sha256},
+            ${clippy_sha256}, \\
+            ${cargo_sha256}, \\
+            ${llvm_tools_sha256}, \\
+            ${rust_std_sha256},
 }" "${src}/build/kong_crate/deps.bzl"
 
     ###################################
@@ -243,10 +243,10 @@ get_rust_sha256()
 
     for tool in "${tools[@]}"; do
         url="https://static.rust-lang.org/dist/${tool}-${rust_version}-${triple}.tar.xz.sha256"
-	read -r sha filename < <(curl -fsSL "$url")
+        read -r sha filename < <(curl -fsSL "$url")
         var_name="${tool//-/_}_sha256"
-	value="\"${filename}\": \"${sha}\""
-	printf '%s\t%s\n' "$var_name" "$value"
+        value="\"${filename}\": \"${sha}\""
+        printf '%s\t%s\n' "$var_name" "$value"
     done
 }
 
@@ -261,8 +261,8 @@ dep_adaption()
     if [ "${ver_num}" -ge 3009000 ]; then
         cp "${patches}/for_deps/platforms_1.1.0_loongarch64.patch" "${src}/third_party/"
     else
-	cp "${patches}/for_deps/atc_router_1.6.2_loongarch64.patch" "${src}/third_party/"
-	cp "${patches}/for_deps/001-4.4.27-enable-hash-all.patch" "${src}/build/cross_deps/libxcrypt/"
+        cp "${patches}/for_deps/atc_router_1.6.2_loongarch64.patch" "${src}/third_party/"
+        cp "${patches}/for_deps/001-4.4.27-enable-hash-all.patch" "${src}/build/cross_deps/libxcrypt/"
     fi
 }
 
