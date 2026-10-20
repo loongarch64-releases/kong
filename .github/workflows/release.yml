@@ -1,6 +1,8 @@
 name: Auto Build kong
 
 on:
+  schedule:
+    - cron: '0 16 * * *'
   workflow_dispatch:
 
 env:

@@ -38,8 +38,9 @@ prepare()
 build()
 {
     local MAJOR_VER=$(echo ${VERSION} | cut -d. -f1)
-    local MINOR_VER=$(echo ${VERSION} | cut -d. -f1)
-    local VER_NUM=$(( 10#$MAJOR_VER * 1000 + 10#$MINOR_VER ))
+    local MINOR_VER=$(echo ${VERSION} | cut -d. -f2)
+    local PATCH_VER=$(echo ${VERSION} | cut -d. -f3)
+    local VER_NUM=$((10#$MAJOR_VER * 1000000 + 10#$MINOR_VER * 1000 + 10#$PATCH_VER))
 
     echo "🔨 [Build] Compiling source code..."
     
@@ -71,7 +72,7 @@ build()
 
     # 构建 deb 包
     export NFPM_BIN=/tmp/go/bin/nfpm
-    bazel build "${BUILD_PARAM}" //:kong_deb
+    bazel build "${BUILD_PARAM[@]}" //:kong_deb
 
     popd
 
